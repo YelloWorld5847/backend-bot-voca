@@ -5,36 +5,35 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SER
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Méthode non autorisée' });
 
-  // récupérer les utilisateurs
-  const { data: users, error: usersError } = await supabase
+  // récupérer les utilisateurs et leurs crédits
+  const { data: users } = await supabase
     .from('users')
     .select('username, remaining_mb')
     .order('remaining_mb', { ascending: false });
 
-  // récupérer les 1000 derniers logs (pour le graph et les stats)
-  const { data: logs, error: logsError } = await supabase
+  // récupérer les logs récents (juste pour dessiner la courbe d'activité récente)
+  const { data: recentLogs } = await supabase
     .from('logs')
-    .select('created_at, username, used_mb, article_url, status')
+    .select('created_at')
     .order('created_at', { ascending: false })
     .limit(1000);
 
-  if (usersError || logsError) {
-    return res.status(500).json({ error: 'Erreur DB' });
-  }
+  // récupérer les stats exactes groupées depuis la Vue SQL
+  const { data: articleStats } = await supabase
+    .from('user_article_views')
+    .select('*');
 
-  // calculs rapides côté backend
-  const totalUsedMb = logs.reduce((acc, log) => acc + (log.used_mb || 0), 0);
-  const totalRuns = logs.length;
-  const successfulRuns = logs.filter(l => l.status === 'success').length;
+  // calcul des vrais totaux absolus basés sur les vues validées
+  const allTimeViews = articleStats ? articleStats.reduce((acc, row) => acc + Number(row.total_views), 0) : 0;
+  const allTimeMb = articleStats ? articleStats.reduce((acc, row) => acc + Number(row.total_mb), 0) : 0;
 
   return res.status(200).json({
-    users,
-    logs,
+    users: users ||[],
+    recentLogs: recentLogs || [],
+    articleStats: articleStats ||[],
     global: {
-      totalUsedMb,
-      totalRuns,
-      successfulRuns,
-      successRate: totalRuns > 0 ? Math.round((successfulRuns / totalRuns) * 100) : 0
+      allTimeViews,
+      allTimeMb
     }
   });
 }

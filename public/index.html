@@ -10,51 +10,67 @@
 <body class="bg-gray-900 text-white font-sans antialiased p-6">
 
     <div class="max-w-7xl mx-auto">
-        <h1 class="text-3xl font-bold mb-8 text-blue-400">🚀 Vocal Bot Dashboard</h1>
+        <h1 class="text-3xl font-bold mb-8 text-blue-400">🚀 Vocal Dashboard</h1>
 
         <!-- Cartes Globales -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <div class="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700">
-                <h3 class="text-gray-400 text-sm font-semibold uppercase">Total Runs (Top 1000)</h3>
-                <p class="text-3xl font-bold text-white mt-2" id="stat-runs">...</p>
+                <h3 class="text-gray-400 text-sm font-semibold uppercase">Total Vues Générées</h3>
+                <p class="text-4xl font-bold text-white mt-2" id="stat-views">...</p>
             </div>
             <div class="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700">
-                <h3 class="text-gray-400 text-sm font-semibold uppercase">Data Consommée</h3>
-                <p class="text-3xl font-bold text-blue-400 mt-2" id="stat-data">...</p>
+                <h3 class="text-gray-400 text-sm font-semibold uppercase">Bande Passante (Succès)</h3>
+                <p class="text-4xl font-bold text-blue-400 mt-2" id="stat-data">...</p>
             </div>
             <div class="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700">
-                <h3 class="text-gray-400 text-sm font-semibold uppercase">Taux de Succès</h3>
-                <p class="text-3xl font-bold text-green-400 mt-2" id="stat-success">...</p>
-            </div>
-            <div class="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700">
-                <h3 class="text-gray-400 text-sm font-semibold uppercase">Utilisateurs Actifs</h3>
-                <p class="text-3xl font-bold text-purple-400 mt-2" id="stat-users">...</p>
+                <h3 class="text-gray-400 text-sm font-semibold uppercase">Comptes Actifs</h3>
+                <p class="text-4xl font-bold text-purple-400 mt-2" id="stat-users">...</p>
             </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <!-- Graphique -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <!-- Graphique d'activité récente -->
             <div class="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700 lg:col-span-2">
-                <h3 class="text-lg font-bold mb-4">Activité Récente (Runs par heure)</h3>
+                <h3 class="text-lg font-bold mb-4">Activité Récente (Dernières vues)</h3>
                 <canvas id="activityChart" height="100"></canvas>
             </div>
 
-            <!-- tableau des potes (Crédits) -->
+            <!-- Tableau des Crédits Restants -->
             <div class="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700 overflow-hidden">
-                <h3 class="text-lg font-bold mb-4">Crédits des Comptes</h3>
-                <div class="overflow-y-auto max-h-80">
+                <h3 class="text-lg font-bold mb-4">Soldes (Mo Restants)</h3>
+                <div class="overflow-y-auto max-h-80 pr-2">
                     <table class="w-full text-left">
                         <thead>
                             <tr class="text-gray-400 text-sm border-b border-gray-700">
                                 <th class="pb-2">Utilisateur</th>
-                                <th class="pb-2 text-right">Crédits (Mo)</th>
+                                <th class="pb-2 text-right">Crédits</th>
                             </tr>
                         </thead>
                         <tbody id="users-table">
-                            <!-- rempli par js -->
+                            <!-- Rempli par JS -->
                         </tbody>
                     </table>
                 </div>
+            </div>
+        </div>
+
+        <!-- tableau Détaillé par Vues & Articles -->
+        <div class="bg-gray-800 p-6 rounded-lg shadow-lg border border-gray-700 overflow-hidden mb-12">
+            <h3 class="text-xl font-bold mb-4 border-b border-gray-700 pb-2 text-blue-300">📊 Détail des Vues par Utilisateur & Article</h3>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left whitespace-nowrap">
+                    <thead>
+                        <tr class="text-gray-400 text-sm border-b border-gray-700">
+                            <th class="pb-3 px-4">Utilisateur</th>
+                            <th class="pb-3 px-4">Article</th>
+                            <th class="pb-3 px-4 text-right">Vues Validées</th>
+                            <th class="pb-3 px-4 text-right">Data Utilisée</th>
+                        </tr>
+                    </thead>
+                    <tbody id="articles-table">
+                        <!-- Rempli par JS -->
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -65,54 +81,74 @@
                 const res = await fetch('/api/stats');
                 const data = await res.json();
 
-                // mise à jour des cartes
-                document.getElementById('stat-runs').innerText = data.global.totalRuns;
-                document.getElementById('stat-data').innerText = (data.global.totalUsedMb).toFixed(2) + ' Mo';
-                document.getElementById('stat-success').innerText = data.global.successRate + '%';
+                // mise à jour des cartes globales (avec les vrais chiffres de la DB)
+                document.getElementById('stat-views').innerText = data.global.allTimeViews.toLocaleString('fr-FR');
+                document.getElementById('stat-data').innerText = (data.global.allTimeMb / 1024).toFixed(2) + ' Go';
                 document.getElementById('stat-users').innerText = data.users.length;
 
-                // remplissage du tableau des utilisateurs
-                const tbody = document.getElementById('users-table');
+                // remplissage du tableau des soldes utilisateurs
+                const tbodyUsers = document.getElementById('users-table');
                 data.users.forEach(u => {
                     const isLow = u.remaining_mb < 50;
-                    tbody.innerHTML += `
-                        <tr class="border-b border-gray-700/50">
+                    tbodyUsers.innerHTML += `
+                        <tr class="border-b border-gray-700/50 hover:bg-gray-700/30">
                             <td class="py-3 font-medium">${u.username}</td>
                             <td class="py-3 text-right font-bold ${isLow ? 'text-red-400' : 'text-green-400'}">
-                                ${u.remaining_mb.toFixed(1)}
+                                ${u.remaining_mb.toFixed(1)} Mo
                             </td>
                         </tr>
                     `;
                 });
 
-                // préparation des données pour le Graphique Chart.js
-                // on groupe les logs par heure (format: "YYYY-MM-DD HH:00")
+                // remplissage du tableau détaillé Vues / Article
+                const tbodyArticles = document.getElementById('articles-table');
+                data.articleStats.forEach(stat => {
+                    // Raccourcir l'URL visuellement pour que le tableau reste propre
+                    const shortUrl = stat.article_url.length > 60 
+                        ? stat.article_url.substring(0, 60) + '...' 
+                        : stat.article_url;
+
+                    tbodyArticles.innerHTML += `
+                        <tr class="border-b border-gray-700/50 hover:bg-gray-700/30 transition-colors">
+                            <td class="py-3 px-4 font-bold text-purple-300">@${stat.username}</td>
+                            <td class="py-3 px-4 text-gray-300">
+                                <a href="${stat.article_url}" target="_blank" class="hover:text-blue-400 hover:underline">
+                                    ${shortUrl}
+                                </a>
+                            </td>
+                            <td class="py-3 px-4 text-right font-bold text-green-400 text-lg">${stat.total_views.toLocaleString('fr-FR')}</td>
+                            <td class="py-3 px-4 text-right text-gray-400">${stat.total_mb.toFixed(1)} Mo</td>
+                        </tr>
+                    `;
+                });
+
+                // préparation des données pour le Graphique Chart.js (basé sur l'activité récente)
                 const countsByHour = {};
-                data.logs.forEach(log => {
+                data.recentLogs.forEach(log => {
                     const date = new Date(log.created_at);
-                    const key = date.toISOString().slice(0, 13) + ':00'; // ex: "2024-02-26T14:00"
+                    const key = date.toISOString().slice(0, 13) + ':00'; // Grouper par heure
                     countsByHour[key] = (countsByHour[key] || 0) + 1;
                 });
 
-                // trier chronologiquement
                 const sortedKeys = Object.keys(countsByHour).sort();
                 const labels = sortedKeys.map(k => new Date(k).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}));
                 const chartData = sortedKeys.map(k => countsByHour[k]);
 
-                // affichage du graphique
+                // Affichage du graphiqu
                 const ctx = document.getElementById('activityChart').getContext('2d');
                 new Chart(ctx, {
                     type: 'line',
                     data: {
                         labels: labels,
                         datasets:[{
-                            label: 'Nombre de Runs',
+                            label: 'Vues générées',
                             data: chartData,
-                            borderColor: '#60A5FA', // blue-400
+                            borderColor: '#60A5FA', 
                             backgroundColor: 'rgba(96, 165, 250, 0.2)',
                             borderWidth: 2,
                             tension: 0.3,
-                            fill: true
+                            fill: true,
+                            pointRadius: 3
                         }]
                     },
                     options: {
@@ -120,7 +156,7 @@
                         plugins: { legend: { display: false } },
                         scales: {
                             y: { beginAtZero: true, grid: { color: '#374151' } },
-                            x: { grid: { color: '#374151' } }
+                            x: { grid: { display: false } }
                         }
                     }
                 });
